@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_Thai } from 'next/font/google'  // เปลี่ยนจาก '@next/font/google'
+import { Noto_Sans_Thai } from 'next/font/google'  // Correct import
 import './globals.css'
 
 const notoSansThai = Noto_Sans_Thai({
