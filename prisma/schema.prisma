@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ผู้ใช้งาน
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// สินค้า (ต้นไม้)
+model Product {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  name        String
+  description String?
+  images      ProductImage[]
+  height      Float?
+  width       Float?
+  trunkSize   Float?        // ขนาดลำต้น
+  potHeight   Float?        // ความสูงตุ้ม
+  potWidth    Float?        // ความกว้างตุ้ม
+  location    String?       // ที่อยู่
+  sunlight    Sunlight     @default(FULL)
+  water       WaterNeed    @default(HIGH)
+  cost        Float
+  price       Float
+  status      ProductStatus @default(AVAILABLE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  sales       Sale[]
+}
+
+// รูปภาพสินค้า
+model ProductImage {
+  id        String   @id @default(cuid())
+  url       String
+  isMain    Boolean  @default(false)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+enum Sunlight {
+  FULL     // ชอบแดด
+  PARTIAL  // แดดน้อย
+}
+
+enum WaterNeed {
+  HIGH    // ชอบน้ำ
+  LOW     // ไม่ชอบน้ำ
+}
+
+enum ProductStatus {
+  AVAILABLE
+  SOLD
+  RESERVED
+}
+
+// การขาย
+model Sale {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  price       Float
+  shipping    Float?
+  installation Float?
+  otherCosts  Float?
+  totalCost   Float
+  status      SaleStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum SaleStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+// ลูกค้า
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  province  String?
+  note      String?
+  sales     Sale[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+} 
