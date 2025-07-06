@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -22,27 +22,83 @@ enum Role {
   ADMIN
 }
 
+// สวนต้นไม้ (แหล่งที่มาของต้นไม้)
+model Garden {
+  id           String        @id @default(cuid())
+  name         String // ชื่อสวน เช่น "ตุ่น อุบล", "เพลงไทยไม้ล้อม"
+  location     String? // ที่อยู่ของสวน
+  ownerName    String? // ชื่อเจ้าของสวน เช่น "พี่ทิต", "พี่หมอก"
+  contactInfo  String? // ข้อมูลติดต่อ
+  province     String? // จังหวัด
+  district     String? // อำเภอ
+  subDistrict  String? // ตำบล
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  purchases    Purchase[] // การซื้อจากสวนนี้
+  transactions Transaction[] // บันทึกการเงินที่เกี่ยวข้อง
+
+  @@map("gardens")
+}
+
+// หมวดหมู่ค่าใช้จ่าย
+model CostCategory {
+  id           String        @id @default(cuid())
+  name         String        @unique // ชื่อหมวดหมู่
+  nameEn       String? // ชื่อภาษาอังกฤษ
+  description  String? // คำอธิบาย
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  productCosts ProductCost[] // รายการค่าใช้จ่ายในหมวดนี้
+
+  @@map("cost_categories")
+}
+
+// การซื้อต้นไม้
+model Purchase {
+  id           String         @id @default(cuid())
+  purchaseCode String         @unique // รหัสการซื้อ เช่น "TB68-001", "MP68-001"
+  purchaseDate DateTime // วันที่ซื้อ
+  gardenId     String // สวนที่ซื้อ
+  garden       Garden         @relation(fields: [gardenId], references: [id])
+  supplierRef  String? // รหัสอ้างอิงจากผู้ขาย เช่น "พี่กิจ", "พี่ทิต"
+  totalCost    Float // ต้นทุนรวมทั้งหมด
+  status       PurchaseStatus @default(PENDING)
+  note         String? // หมายเหตุ
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  productCosts ProductCost[] // รายการค่าใช้จ่ายแยกรายการ
+  products     Product[] // ต้นไม้ที่ได้จากการซื้อครั้งนี้
+
+  @@map("purchases")
+}
+
 // สินค้า (ต้นไม้)
 model Product {
-  id          String        @id @default(cuid())
-  code        String        @unique
+  id          String         @id @default(cuid())
+  code        String         @unique
   name        String
   description String?
   images      ProductImage[]
-  height      Float?
-  width       Float?
-  trunkSize   Float?        // ขนาดลำต้น
-  potHeight   Float?        // ความสูงตุ้ม
-  potWidth    Float?        // ความกว้างตุ้ม
-  location    String?       // ที่อยู่
-  sunlight    Sunlight     @default(FULL)
-  water       WaterNeed    @default(HIGH)
-  cost        Float
-  price       Float
-  status      ProductStatus @default(AVAILABLE)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  height      Float? // ความสูงต้น (เมตร)
+  width       Float? // หน้าไม้ (นิ้ว)
+  trunkSize   Float? // ขนาดลำต้น
+  potHeight   Float? // ความสูงตุ้ม (ซม.)
+  potWidth    Float? // ความกว้างตุ้ม (เมตร)
+  location    String? // ที่อยู่ปัจจุบัน
+  sunlight    Sunlight       @default(FULL)
+  water       WaterNeed      @default(HIGH)
+  cost        Float // ต้นทุนต่อต้น (จะคำนวณจาก ProductCost)
+  price       Float // ราคาขาย
+  status      ProductStatus  @default(AVAILABLE)
+  purchaseId  String? // การซื้อที่ได้ต้นไม้นี้มา
+  purchase    Purchase?      @relation(fields: [purchaseId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   sales       Sale[]
+
+  @@map("products")
 }
 
 // รูปภาพสินค้า
@@ -53,45 +109,95 @@ model ProductImage {
   productId String
   product   Product  @relation(fields: [productId], references: [id])
   createdAt DateTime @default(now())
+
+  @@map("product_images")
+}
+
+// ค่าใช้จ่ายแยกรายการ
+model ProductCost {
+  id             String       @id @default(cuid())
+  purchaseId     String // การซื้อที่เกี่ยวข้อง
+  purchase       Purchase     @relation(fields: [purchaseId], references: [id])
+  costCategoryId String // หมวดหมู่ค่าใช้จ่าย
+  costCategory   CostCategory @relation(fields: [costCategoryId], references: [id])
+  amount         Float // จำนวนเงิน
+  description    String? // รายละเอียดเพิ่มเติม
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("product_costs")
+}
+
+// บันทึกการเงิน (บัญชีทุนไม้ล้อม)
+model Transaction {
+  id            String          @id @default(cuid())
+  date          DateTime // วันที่ทำรายการ
+  description   String // รายละเอียด
+  type          TransactionType // ประเภทรายการ
+  amount        Float // จำนวนเงิน
+  balance       Float? // ยอดคงเหลือ
+  referenceId   String? // อ้างอิงไป Purchase หรือ Sale
+  referenceType String? // ประเภทการอ้างอิง
+  gardenId      String? // สวนที่เกี่ยวข้อง (ถ้ามี)
+  garden        Garden?         @relation(fields: [gardenId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("transactions")
 }
 
 enum Sunlight {
-  FULL     // ชอบแดด
-  PARTIAL  // แดดน้อย
+  FULL // ชอบแดด
+  PARTIAL // แดดน้อย
 }
 
 enum WaterNeed {
-  HIGH    // ชอบน้ำ
-  LOW     // ไม่ชอบน้ำ
+  HIGH // ชอบน้ำ
+  LOW // ไม่ชอบน้ำ
 }
 
 enum ProductStatus {
-  AVAILABLE
-  SOLD
-  RESERVED
+  AVAILABLE // พร้อมขาย
+  SOLD // ขายแล้ว
+  RESERVED // จองแล้ว
+  DEAD // ไม้ตาย
+}
+
+enum PurchaseStatus {
+  PENDING // รอดำเนินการ
+  COMPLETED // เสร็จสิ้น
+  CANCELLED // ยกเลิก
+}
+
+enum TransactionType {
+  INCOME // รายรับ
+  EXPENSE // รายจ่าย
+  TRANSFER // โอนเงิน
 }
 
 // การขาย
 model Sale {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id])
-  price       Float
-  shipping    Float?
+  id           String     @id @default(cuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  customerId   String
+  customer     Customer   @relation(fields: [customerId], references: [id])
+  price        Float
+  shipping     Float?
   installation Float?
-  otherCosts  Float?
-  totalCost   Float
-  status      SaleStatus @default(PENDING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  otherCosts   Float?
+  totalCost    Float
+  status       SaleStatus @default(PENDING)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("sales")
 }
 
 enum SaleStatus {
-  PENDING
-  COMPLETED
-  CANCELLED
+  PENDING // รอดำเนินการ
+  COMPLETED // เสร็จสิ้น
+  CANCELLED // ยกเลิก
 }
 
 // ลูกค้า
@@ -105,4 +211,6 @@ model Customer {
   sales     Sale[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-} 
+
+  @@map("customers")
+}

@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "mailom",
+    "description": "Tree cost management system",
+    "type": "nextjs",
+    "framework": "Next.js 14",
+    "database": "prisma"
+  },
+  "tasks": {
+    "development": {
+      "start": "npm run dev",
+      "build": "npm run build",
+      "lint": "npm run lint",
+      "seed": "npm run seed",
+      "import-excel": "npm run import-excel"
+    },
+    "database": {
+      "migrate": "npx prisma migrate dev",
+      "generate": "npx prisma generate",
+      "studio": "npx prisma studio",
+      "reset": "npx prisma migrate reset"
+    },
+    "deployment": {
+      "build": "npm run build",
+      "start": "npm start"
+    }
+  },
+  "environments": {
+    "development": {
+      "port": 3000,
+      "database_url": "file:./dev.db"
+    },
+    "production": {
+      "port": 3000
+    }
+  },
+  "workflows": {
+    "setup": [
+      "npm install",
+      "npx prisma generate",
+      "npx prisma migrate dev",
+      "npm run seed"
+    ],
+    "deploy": [
+      "npm run build",
+      "npx prisma migrate deploy"
+    ]
+  }
+}

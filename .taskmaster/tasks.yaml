@@ -1,0 +1,126 @@
+# Task Master Tasks Configuration
+# Mailom - Tree Cost Management System
+
+project:
+  name: mailom
+  description: "Tree cost management system for tracking and analyzing tree costs"
+  version: "0.1.0"
+  framework: "Next.js 14"
+  database: "Prisma + SQLite"
+
+tasks:
+  # Development Tasks
+  dev:
+    description: "Start development server"
+    command: "npm run dev"
+    port: 3000
+    watch: true
+    
+  build:
+    description: "Build the application for production"
+    command: "npm run build"
+    
+  start:
+    description: "Start production server"
+    command: "npm start"
+    port: 3000
+    
+  lint:
+    description: "Run ESLint code linting"
+    command: "npm run lint"
+    
+  # Database Tasks
+  db:migrate:
+    description: "Run database migrations"
+    command: "npx prisma migrate dev"
+    
+  db:generate:
+    description: "Generate Prisma client"
+    command: "npx prisma generate"
+    
+  db:studio:
+    description: "Open Prisma Studio"
+    command: "npx prisma studio"
+    port: 5555
+    
+  db:seed:
+    description: "Seed the database with initial data"
+    command: "npm run seed"
+    
+  db:reset:
+    description: "Reset database and run migrations"
+    command: "npx prisma migrate reset"
+    confirm: true
+    
+  # Data Import Tasks
+  import:excel:
+    description: "Import Excel data into database"
+    command: "npm run import-excel"
+    
+  import:dry-run:
+    description: "Dry run Excel import (test without saving)"
+    command: "npx ts-node scripts/dry-run-import.ts"
+    
+  # Utility Tasks
+  clean:
+    description: "Clean build artifacts"
+    command: "rm -rf .next dist"
+    
+  install:
+    description: "Install dependencies"
+    command: "npm install"
+    
+  postinstall:
+    description: "Run post-install tasks"
+    command: "npm run postinstall"
+
+# Workflows - Combinations of tasks
+workflows:
+  setup:
+    description: "Complete project setup"
+    steps:
+      - install
+      - db:generate
+      - db:migrate
+      - db:seed
+      
+  fresh-start:
+    description: "Fresh project start (reset everything)"
+    steps:
+      - clean
+      - install
+      - db:reset
+      - db:seed
+      
+  deploy:
+    description: "Prepare for deployment"
+    steps:
+      - lint
+      - build
+      - db:generate
+      
+  data-refresh:
+    description: "Refresh data from Excel files"
+    steps:
+      - import:dry-run
+      - import:excel
+
+# Environment configurations
+environments:
+  development:
+    NODE_ENV: "development"
+    PORT: 3000
+    
+  production:
+    NODE_ENV: "production"
+    PORT: 3000
+
+# File watchers
+watchers:
+  prisma:
+    files: ["prisma/schema.prisma"]
+    tasks: ["db:generate"]
+    
+  excel:
+    files: ["Doc/*.xlsx"]
+    tasks: ["import:dry-run"]

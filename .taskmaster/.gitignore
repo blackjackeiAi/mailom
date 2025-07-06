@@ -1,0 +1,17 @@
+# Task Master temporary files
+*.log
+*.tmp
+.env.local
+.env.*.local
+
+# Runtime files
+runtime/
+logs/
+pid/
+
+# Local configuration overrides
+config.local.json
+tasks.local.yaml
+
+# Cache
+.cache/

@@ -1,20 +1,94 @@
 'use client'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import SalesChart from '@/components/admin/SalesChart'
 
+interface DashboardData {
+  totalPurchases: number
+  totalCost: number
+  totalProducts: number
+  totalSales: number
+  totalRevenue: number
+  grossProfit: number
+  profitMargin: number
+  avgCostPerProduct: number
+}
+
+interface RecentPurchase {
+  id: string
+  purchaseCode: string
+  purchaseDate: string
+  garden: { name: string }
+  totalCost: number
+  _count: { products: number }
+}
+
 export default function AdminDashboard() {
   const searchParams = useSearchParams()
-  const gardenId = searchParams.get('gardenId') || '1'
+  const gardenId = searchParams.get('gardenId') || ''
   
-  const gardens = [
-    { id: '1', name: 'สวนไม้ล้อม', location: 'นครปฐม' },
-    { id: '2', name: 'สวนนาย ก', location: 'ราชบุรี' },
-    { id: '3', name: 'สวนนาย ข', location: 'สุพรรณบุรี' },
-    { id: '4', name: 'สวนนาย ค', location: 'กาญจนบุรี' },
-  ]
+  const [gardens, setGardens] = useState<Array<{id: string, name: string, location?: string}>>([])
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [recentPurchases, setRecentPurchases] = useState<RecentPurchase[]>([])
+  const [loading, setLoading] = useState(true)
   
   const currentGarden = gardens.find(g => g.id === gardenId) || gardens[0]
+
+  useEffect(() => {
+    fetchGardens()
+    fetchDashboardData()
+  }, [gardenId])
+
+  const fetchGardens = async () => {
+    try {
+      const response = await fetch('/api/gardens')
+      const data = await response.json()
+      if (response.ok) {
+        setGardens(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching gardens:', error)
+    }
+  }
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams({
+        type: 'summary',
+        ...(gardenId && { gardenId }),
+      })
+
+      const response = await fetch(`/api/cost-analysis?${params}`)
+      const data = await response.json()
+
+      if (response.ok) {
+        setDashboardData(data.summary)
+        setRecentPurchases(data.recentPurchases || [])
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('th-TH', {
+      style: 'currency',
+      currency: 'THB',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
 
   return (
     <div className="space-y-8">
@@ -24,11 +98,25 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold text-gray-800">สวัสดี, Admin</h1>
             <p className="text-gray-500 mt-1">
-              {currentGarden.name} - {currentGarden.location}
+              {currentGarden ? `${currentGarden.name} - ${currentGarden.location || 'ไม่ระบุที่อยู่'}` : 'ทุกสวน'}
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <select className="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <select 
+              value={gardenId}
+              onChange={(e) => {
+                const url = new URL(window.location.href)
+                if (e.target.value) {
+                  url.searchParams.set('gardenId', e.target.value)
+                } else {
+                  url.searchParams.delete('gardenId')
+                }
+                window.history.pushState({}, '', url.toString())
+                window.location.reload()
+              }}
+              className="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">ทุกสวน</option>
               {gardens.map(garden => (
                 <option key={garden.id} value={garden.id}>
                   {garden.name}
@@ -57,19 +145,21 @@ export default function AdminDashboard() {
               </svg>
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-800">฿1,000,000</p>
+          <p className="text-3xl font-bold text-gray-800">
+            {loading ? 'กำลังโหลด...' : formatCurrency(dashboardData?.totalRevenue || 0)}
+          </p>
           <p className="text-green-600 text-sm mt-2 flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
             </svg>
-            +15% จากเดือนที่แล้ว
+            {dashboardData?.totalSales || 0} ครั้ง
           </p>
         </div>
 
-        {/* เงินในระบบ */}
+        {/* ต้นทุนรวม */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-sm border border-blue-100">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-blue-800 font-medium">เงินในระบบ</h3>
+            <h3 className="text-blue-800 font-medium">ต้นทุนรวม</h3>
             <span className="bg-blue-100 p-2 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
@@ -77,8 +167,10 @@ export default function AdminDashboard() {
               </svg>
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-800">฿1,000,000</p>
-          <p className="text-blue-600 text-sm mt-2">ยอดรวมทั้งหมด</p>
+          <p className="text-3xl font-bold text-gray-800">
+            {loading ? 'กำลังโหลด...' : formatCurrency(dashboardData?.totalCost || 0)}
+          </p>
+          <p className="text-blue-600 text-sm mt-2">{dashboardData?.totalPurchases || 0} ครั้งซื้อ</p>
         </div>
 
         {/* กำไรสุทธิ */}
@@ -91,8 +183,12 @@ export default function AdminDashboard() {
               </svg>
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-800">฿1,000,000</p>
-          <p className="text-purple-600 text-sm mt-2">เพิ่มขึ้น 25%</p>
+          <p className="text-3xl font-bold text-gray-800">
+            {loading ? 'กำลังโหลด...' : formatCurrency(dashboardData?.grossProfit || 0)}
+          </p>
+          <p className="text-purple-600 text-sm mt-2">
+            {dashboardData?.profitMargin?.toFixed(1) || 0}% อัตรากำไร
+          </p>
         </div>
 
         {/* สต็อกคงเหลือ */}
@@ -105,8 +201,12 @@ export default function AdminDashboard() {
               </svg>
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-800">135</p>
-          <p className="text-amber-600 text-sm mt-2">ต้น</p>
+          <p className="text-3xl font-bold text-gray-800">
+            {loading ? 'กำลังโหลด...' : (dashboardData?.totalProducts || 0)}
+          </p>
+          <p className="text-amber-600 text-sm mt-2">
+            {formatCurrency(dashboardData?.avgCostPerProduct || 0)}/ต้น
+          </p>
         </div>
       </div>
 
@@ -157,23 +257,35 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {[...Array(5)].map((_, i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm">T1234</td>
-                    <td className="px-4 py-3 text-sm">ปาล์ม</td>
-                    <td className="px-4 py-3 text-sm">12/12/2024</td>
-                    <td className="px-4 py-3 text-sm">นาย ก</td>
-                    <td className="px-4 py-3 text-sm">฿10,000</td>
-                    <td className="px-4 py-3 text-sm font-medium text-green-600">฿20,000</td>
-                    <td className="px-4 py-3 text-sm">
-                      <button className="text-gray-400 hover:text-red-600 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      กำลังโหลด...
                     </td>
                   </tr>
-                ))}
+                ) : recentPurchases.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      ไม่พบข้อมูลการซื้อ
+                    </td>
+                  </tr>
+                ) : (
+                  recentPurchases.map((purchase) => (
+                    <tr key={purchase.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm">{purchase.purchaseCode}</td>
+                      <td className="px-4 py-3 text-sm">{purchase.garden.name}</td>
+                      <td className="px-4 py-3 text-sm">{formatDate(purchase.purchaseDate)}</td>
+                      <td className="px-4 py-3 text-sm">-</td>
+                      <td className="px-4 py-3 text-sm">{formatCurrency(purchase.totalCost)}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{purchase._count.products} ต้น</td>
+                      <td className="px-4 py-3 text-sm">
+                        <a href={`/admin/purchases`} className="text-blue-600 hover:text-blue-800">
+                          ดูรายละเอียด
+                        </a>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

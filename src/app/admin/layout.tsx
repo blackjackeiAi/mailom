@@ -44,6 +44,29 @@ export default function AdminLayout({
             className="flex items-center px-6 py-3 text-white hover:bg-white/10">
             SALE REPORT
           </Link>
+          
+          {/* Cost Management Section */}
+          <div className="mt-6 px-6 py-2">
+            <h3 className="text-white/60 text-xs uppercase tracking-wider font-medium">
+              Cost Management
+            </h3>
+          </div>
+          <Link href="/admin/gardens" 
+            className="flex items-center px-6 py-3 text-white hover:bg-white/10">
+            GARDENS
+          </Link>
+          <Link href="/admin/purchases" 
+            className="flex items-center px-6 py-3 text-white hover:bg-white/10">
+            PURCHASES
+          </Link>
+          <Link href="/admin/cost-analysis" 
+            className="flex items-center px-6 py-3 text-white hover:bg-white/10">
+            COST ANALYSIS
+          </Link>
+          <Link href="/admin/import" 
+            className="flex items-center px-6 py-3 text-white hover:bg-white/10">
+            IMPORT DATA
+          </Link>
         </nav>
       </aside>
 
