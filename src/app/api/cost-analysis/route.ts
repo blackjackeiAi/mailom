@@ -3,14 +3,17 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// Add this to make the route dynamic
+export const dynamic = 'force-dynamic'
+
 // GET - Get cost analysis data
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const gardenId = searchParams.get('gardenId')
-    const type = searchParams.get('type') || 'summary' // summary, byCategory, byGarden, byMonth
+    const url = new URL(request.url || 'http://localhost')
+    const startDate = url.searchParams.get('startDate')
+    const endDate = url.searchParams.get('endDate')
+    const gardenId = url.searchParams.get('gardenId')
+    const type = url.searchParams.get('type') || 'summary' // summary, byCategory, byGarden, byMonth
 
     let dateFilter = {}
     if (startDate && endDate) {

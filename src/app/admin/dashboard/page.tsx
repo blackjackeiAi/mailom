@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import SalesChart from '@/components/admin/SalesChart'
 
@@ -23,7 +23,7 @@ interface RecentPurchase {
   _count: { products: number }
 }
 
-export default function AdminDashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams()
   const gardenId = searchParams.get('gardenId') || ''
   
@@ -342,5 +342,13 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8">กำลังโหลด...</div>}>
+      <DashboardContent />
+    </Suspense>
   )
 } 
