@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  console.log('🧹 Cleaning up existing data...')
   // ลบข้อมูลเก่าก่อน (ลำดับสำคัญเพื่อหลีกเลี่ยง foreign key constraints)
   await prisma.transaction.deleteMany({})
   await prisma.sale.deleteMany({})
@@ -11,12 +12,13 @@ async function main() {
   await prisma.product.deleteMany({})
   await prisma.purchase.deleteMany({})
   await prisma.customer.deleteMany({})
-  await prisma.costCategory.deleteMany({})
-  await prisma.supplierGarden.deleteMany({})
   await prisma.userGarden.deleteMany({})
   await prisma.ourGarden.deleteMany({})
+  await prisma.supplierGarden.deleteMany({})
+  await prisma.costCategory.deleteMany({})
   await prisma.user.deleteMany({})
 
+  console.log('👥 Creating users...')
   // สร้าง users ตัวอย่างสำหรับทุก role
   const adminPassword = await bcrypt.hash('admin123', 12)
   const managerPassword = await bcrypt.hash('manager123', 12)
@@ -59,43 +61,173 @@ async function main() {
     },
   })
 
-  // สร้างข้อมูลสวนต้นไม้ตัวอย่าง
-  const gardens = await prisma.garden.createMany({
-    data: [
-      {
+  console.log('✅ Users created:', [admin, manager, employee, user].length)
+
+  console.log('🌱 Creating our gardens...')
+  // สร้างสวนของเรา
+  const ourGardens = await Promise.all([
+    prisma.ourGarden.create({
+      data: {
+        name: 'สวนพี่ทิต',
+        location: 'ขอนแก่น',
+        managerName: 'พี่ทิต',
+        description: 'สวนหลักของเรา ดูแลโดยพี่ทิต',
+      },
+    }),
+    prisma.ourGarden.create({
+      data: {
+        name: 'สวนพี่หมอก',
+        location: 'บุรีรัมย์',
+        managerName: 'พี่หมอก',
+        description: 'สวนสาขา ดูแลโดยพี่หมอก',
+      },
+    }),
+    prisma.ourGarden.create({
+      data: {
+        name: 'สวนไม้ล้อม',
+        location: 'มหาสารคาม',
+        managerName: 'พี่ไม้ล้อม',
+        description: 'สวนไม้ล้อม เก็บไม้ใหญ่',
+      },
+    }),
+    prisma.ourGarden.create({
+      data: {
+        name: 'สวนมีสุข',
+        location: 'ร้อยเอ็ด',
+        managerName: 'พี่มีสุข',
+        description: 'สวนมีสุข สำหรับไม้สวยงาม',
+      },
+    }),
+  ])
+  console.log('✅ Our gardens created:', ourGardens.length)
+
+  console.log('🏪 Creating supplier gardens...')
+  // สร้างสวนที่ซื้อมา
+  const supplierGardens = await Promise.all([
+    prisma.supplierGarden.create({
+      data: {
         name: 'ตุ่น อุบล',
         location: 'อุบลราชธานี',
         ownerName: 'พี่ตุ่น',
         province: 'อุบลราชธานี',
         district: 'เมืองอุบลราชธานี',
       },
-      {
+    }),
+    prisma.supplierGarden.create({
+      data: {
         name: 'เพลงไทยไม้ล้อม',
         location: 'ร้อยเอ็ด',
         ownerName: 'พี่เพลง',
         province: 'ร้อยเอ็ด',
       },
-      {
-        name: 'สวนพี่ทิต',
-        location: 'ขอนแก่น',
-        ownerName: 'พี่ทิต',
-        province: 'ขอนแก่น',
-      },
-      {
-        name: 'อ.ชำนาญ',
-        location: 'ชำนาญ',
-        ownerName: 'พี่หมอก',
-        province: 'บุรีรัมย์',
-      },
-      {
+    }),
+    prisma.supplierGarden.create({
+      data: {
         name: 'รุ้งละดา',
         location: 'มหาสารคาม',
         ownerName: 'พี่รุ้ง',
         province: 'มหาสารคาม',
       },
-    ],
-  })
+    }),
+    prisma.supplierGarden.create({
+      data: {
+        name: 'อ.เขียว',
+        location: 'เลย',
+        ownerName: 'อาจารย์เขียว',
+        province: 'เลย',
+      },
+    }),
+    prisma.supplierGarden.create({
+      data: {
+        name: 'อ.ชำนาญ',
+        location: 'ชำนาญ',
+        ownerName: 'อาจารย์ชำนาญ',
+        province: 'บุรีรัมย์',
+      },
+    }),
+    prisma.supplierGarden.create({
+      data: {
+        name: 'สวนจิ๊บ',
+        location: 'อุดรธานี',
+        ownerName: 'พี่จิ๊บ',
+        province: 'อุดรธานี',
+      },
+    }),
+    prisma.supplierGarden.create({
+      data: {
+        name: 'ครูไทยไม้ล้อม',
+        location: 'กาฬสินธุ์',
+        ownerName: 'ครูไทย',
+        province: 'กาฬสินธุ์',
+      },
+    }),
+    prisma.supplierGarden.create({
+      data: {
+        name: 'สวนพี่นาจ',
+        location: 'หนองคาย',
+        ownerName: 'พี่นาจ',
+        province: 'หนองคาย',
+      },
+    }),
+    prisma.supplierGarden.create({
+      data: {
+        name: 'อัยรินทร์',
+        location: 'สกลนคร',
+        ownerName: 'พี่อัยรินทร์',
+        province: 'สกลนคร',
+      },
+    }),
+  ])
+  console.log('✅ Supplier gardens created:', supplierGardens.length)
 
+  console.log('🔗 Creating user-garden mappings...')
+  // สร้างการเชื่อมโยงผู้ใช้กับสวน
+  await Promise.all([
+    // Admin เข้าถึงได้ทุกสวน
+    ...ourGardens.map(garden => 
+      prisma.userGarden.create({
+        data: {
+          userId: admin.id,
+          ourGardenId: garden.id,
+          role: 'ADMIN',
+        },
+      })
+    ),
+    // Manager เข้าถึงได้บางสวน
+    prisma.userGarden.create({
+      data: {
+        userId: manager.id,
+        ourGardenId: ourGardens[0].id, // สวนพี่ทิต
+        role: 'MANAGER',
+      },
+    }),
+    prisma.userGarden.create({
+      data: {
+        userId: manager.id,
+        ourGardenId: ourGardens[2].id, // สวนไม้ล้อม
+        role: 'MANAGER',
+      },
+    }),
+    // Employee เข้าถึงได้สวนเดียว
+    prisma.userGarden.create({
+      data: {
+        userId: employee.id,
+        ourGardenId: ourGardens[1].id, // สวนพี่หมอก
+        role: 'VIEWER',
+      },
+    }),
+    // User เข้าถึงได้สวนเดียว
+    prisma.userGarden.create({
+      data: {
+        userId: user.id,
+        ourGardenId: ourGardens[3].id, // สวนมีสุข
+        role: 'VIEWER',
+      },
+    }),
+  ])
+  console.log('✅ User-garden mappings created')
+
+  console.log('💰 Creating cost categories...')
   // สร้างหมวดหมู่ค่าใช้จ่าย
   const costCategories = await prisma.costCategory.createMany({
     data: [
@@ -113,17 +245,19 @@ async function main() {
       { name: 'เพิ่มทุนไม้ตาย', nameEn: 'Dead Tree Fund', description: 'เพิ่มทุนสำหรับไม้ตาย' },
     ],
   })
+  console.log('✅ Cost categories created')
 
-  // ดึงข้อมูลสวนและหมวดหมู่ค่าใช้จ่าย
-  const gardenList = await prisma.garden.findMany()
+  // ดึงข้อมูลหมวดหมู่ค่าใช้จ่าย
   const categoryList = await prisma.costCategory.findMany()
 
+  console.log('🛒 Creating sample purchases...')
   // สร้างข้อมูลการซื้อตัวอย่าง
   const purchase1 = await prisma.purchase.create({
     data: {
       purchaseCode: 'TB68-001',
       purchaseDate: new Date('2025-01-30'),
-      gardenId: gardenList.find(g => g.name === 'รุ้งละดา')?.id || gardenList[0].id,
+      supplierGardenId: supplierGardens.find(g => g.name === 'รุ้งละดา')?.id || supplierGardens[2].id,
+      ourGardenId: ourGardens[2].id, // สวนไม้ล้อม
       supplierRef: 'ตะแบก',
       totalCost: 42713,
       status: 'COMPLETED',
@@ -135,13 +269,17 @@ async function main() {
     data: {
       purchaseCode: 'MP68-001',
       purchaseDate: new Date('2025-02-15'),
-      gardenId: gardenList.find(g => g.name === 'เพลงไทยไม้ล้อม')?.id || gardenList[1].id,
+      supplierGardenId: supplierGardens.find(g => g.name === 'เพลงไทยไม้ล้อม')?.id || supplierGardens[1].id,
+      ourGardenId: ourGardens[3].id, // สวนมีสุข
       supplierRef: 'พี่กิจ',
       totalCost: 17491,
       status: 'COMPLETED',
     },
   })
 
+  console.log('✅ Sample purchases created:', 2)
+
+  console.log('💸 Creating cost breakdowns...')
   // สร้างข้อมูลค่าใช้จ่าย
   const treePriceCategory = categoryList.find(c => c.name === 'ราคาต้นไม้')
   const transportCategory = categoryList.find(c => c.name === 'ค่าขนส่ง')
@@ -167,7 +305,9 @@ async function main() {
       ],
     })
   }
+  console.log('✅ Cost breakdowns created')
 
+  console.log('🌳 Creating sample products...')
   // สร้างข้อมูลต้นไม้ตัวอย่าง
   const product1 = await prisma.product.create({
     data: {
@@ -182,6 +322,7 @@ async function main() {
       cost: 42713,
       price: 80000,
       purchaseId: purchase1.id,
+      ourGardenId: ourGardens[2].id, // สวนไม้ล้อม
       sunlight: 'FULL',
       water: 'LOW',
       description: 'ตะแบกขนาดใหญ่ สภาพดี หน้าไม้ 60 นิ้ว',
@@ -201,12 +342,16 @@ async function main() {
       cost: 17491,
       price: 35000,
       purchaseId: purchase2.id,
+      ourGardenId: ourGardens[3].id, // สวนมีสุข
       sunlight: 'PARTIAL',
       water: 'HIGH',
       description: 'พยอมขนาดกลาง หน้าไม้ 14 นิ้ว',
     },
   })
 
+  console.log('✅ Sample products created:', 2)
+
+  console.log('👤 Creating sample customer...')
   // สร้างข้อมูลลูกค้าตัวอย่าง
   const customer = await prisma.customer.create({
     data: {
@@ -218,6 +363,7 @@ async function main() {
     },
   })
 
+  console.log('💰 Creating sample sale...')
   // สร้างข้อมูลการขายตัวอย่าง
   const sale = await prisma.sale.create({
     data: {
@@ -238,6 +384,7 @@ async function main() {
     data: { status: 'SOLD' },
   })
 
+  console.log('📊 Creating sample transactions...')
   // สร้างข้อมูลธุรกรรมการเงิน
   const transaction1 = await prisma.transaction.create({
     data: {
@@ -248,7 +395,7 @@ async function main() {
       balance: -42713,
       referenceId: purchase1.id,
       referenceType: 'PURCHASE',
-      gardenId: gardenList.find(g => g.name === 'รุ้งละดา')?.id,
+      supplierGardenId: supplierGardens.find(g => g.name === 'รุ้งละดา')?.id,
     },
   })
 
@@ -266,16 +413,15 @@ async function main() {
 
   console.log('✅ Seed data created successfully!')
   console.log({
-    admin,
-    manager,
-    employee,
-    user,
-    gardens: gardenList.length,
+    users: 4,
+    ourGardens: ourGardens.length,
+    supplierGardens: supplierGardens.length,
+    userGardenMappings: 8,
     costCategories: categoryList.length,
     purchases: 2,
     products: 2,
-    customer,
-    sale,
+    customer: 1,
+    sale: 1,
     transactions: 2,
   })
 }

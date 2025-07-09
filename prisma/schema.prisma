@@ -9,25 +9,71 @@ datasource db {
 
 // ผู้ใช้งาน
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String       @id @default(cuid())
+  email     String       @unique
+  password  String       // เพิ่ม password field
   name      String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      Role         @default(USER)
+  isActive  Boolean      @default(true) // เพิ่ม status
+  lastLogin DateTime?    // บันทึกการเข้าสู่ระบบล่าสุด
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  userGardens UserGarden[] // สวนที่ผู้ใช้เข้าถึงได้
+
+  @@map("users")
 }
 
 enum Role {
-  USER
-  ADMIN
+  USER      // ผู้ใช้งานทั่วไป - ดูข้อมูลได้อย่างจำกัด
+  EMPLOYEE  // พนักงาน - จัดการข้อมูลสต็อก, การขาย
+  MANAGER   // ผู้จัดการ - จัดการข้อมูลการซื้อ, รายงาน, การเงิน
+  ADMIN     // ผู้ดูแลระบบ - เข้าถึงได้ทุกอย่าง
 }
 
-// สวนต้นไม้ (แหล่งที่มาของต้นไม้)
-model Garden {
+// สวนของเรา (สวนที่เราเป็นเจ้าของ)
+model OurGarden {
+  id          String        @id @default(cuid())
+  name        String // ชื่อสวน เช่น "สวนพี่ทิต", "สวนพี่หมอก", "สวนไม้ล้อม", "สวนมีสุข"
+  location    String? // ที่อยู่ของสวน
+  description String? // รายละเอียดสวน
+  managerName String? // ชื่อผู้จัดการสวน
+  contactInfo String? // ข้อมูลติดต่อ
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  userGardens UserGarden[] // ผู้ใช้ที่เข้าถึงสวนนี้ได้
+  products    Product[] // สินค้าที่อยู่ในสวนนี้
+  purchases   Purchase[] // การซื้อที่นำมาไว้ในสวนนี้
+
+  @@map("our_gardens")
+}
+
+// การเชื่อมโยงผู้ใช้กับสวน (สำหรับ role-based access)
+model UserGarden {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  ourGardenId String
+  ourGarden   OurGarden @relation(fields: [ourGardenId], references: [id])
+  role        GardenRole @default(VIEWER) // สิทธิ์ในสวนนี้
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, ourGardenId])
+  @@map("user_gardens")
+}
+
+enum GardenRole {
+  VIEWER   // ดูข้อมูลได้อย่างเดียว
+  MANAGER  // จัดการสวนได้
+  ADMIN    // ควบคุมการเข้าถึงได้
+}
+
+// สวนที่ซื้อมา (แหล่งที่มาของต้นไม้)
+model SupplierGarden {
   id           String        @id @default(cuid())
-  name         String // ชื่อสวน เช่น "ตุ่น อุบล", "เพลงไทยไม้ล้อม"
+  name         String // ชื่อสวน เช่น "ตุ่น อุบล", "เพลงไทยไม้ล้อม", "รุ้งละดา"
   location     String? // ที่อยู่ของสวน
-  ownerName    String? // ชื่อเจ้าของสวน เช่น "พี่ทิต", "พี่หมอก"
+  ownerName    String? // ชื่อเจ้าของสวน เช่น "พี่ตุ่น", "พี่เพลง"
   contactInfo  String? // ข้อมูลติดต่อ
   province     String? // จังหวัด
   district     String? // อำเภอ
@@ -38,7 +84,7 @@ model Garden {
   purchases    Purchase[] // การซื้อจากสวนนี้
   transactions Transaction[] // บันทึกการเงินที่เกี่ยวข้อง
 
-  @@map("gardens")
+  @@map("supplier_gardens")
 }
 
 // หมวดหมู่ค่าใช้จ่าย
@@ -57,19 +103,21 @@ model CostCategory {
 
 // การซื้อต้นไม้
 model Purchase {
-  id           String         @id @default(cuid())
-  purchaseCode String         @unique // รหัสการซื้อ เช่น "TB68-001", "MP68-001"
-  purchaseDate DateTime // วันที่ซื้อ
-  gardenId     String // สวนที่ซื้อ
-  garden       Garden         @relation(fields: [gardenId], references: [id])
-  supplierRef  String? // รหัสอ้างอิงจากผู้ขาย เช่น "พี่กิจ", "พี่ทิต"
-  totalCost    Float // ต้นทุนรวมทั้งหมด
-  status       PurchaseStatus @default(PENDING)
-  note         String? // หมายเหตุ
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  productCosts ProductCost[] // รายการค่าใช้จ่ายแยกรายการ
-  products     Product[] // ต้นไม้ที่ได้จากการซื้อครั้งนี้
+  id                String         @id @default(cuid())
+  purchaseCode      String         @unique // รหัสการซื้อ เช่น "TB68-001", "MP68-001"
+  purchaseDate      DateTime // วันที่ซื้อ
+  supplierGardenId  String // สวนที่ซื้อมา
+  supplierGarden    SupplierGarden @relation(fields: [supplierGardenId], references: [id])
+  ourGardenId       String? // สวนของเราที่จะนำไปไว้
+  ourGarden         OurGarden?     @relation(fields: [ourGardenId], references: [id])
+  supplierRef       String? // รหัสอ้างอิงจากผู้ขาย เช่น "พี่กิจ", "พี่ทิต"
+  totalCost         Float // ต้นทุนรวมทั้งหมด
+  status            PurchaseStatus @default(PENDING)
+  note              String? // หมายเหตุ
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  productCosts      ProductCost[] // รายการค่าใช้จ่ายแยกรายการ
+  products          Product[] // ต้นไม้ที่ได้จากการซื้อครั้งนี้
 
   @@map("purchases")
 }
@@ -86,7 +134,7 @@ model Product {
   trunkSize   Float? // ขนาดลำต้น
   potHeight   Float? // ความสูงตุ้ม (ซม.)
   potWidth    Float? // ความกว้างตุ้ม (เมตร)
-  location    String? // ที่อยู่ปัจจุบัน
+  location    String? // ที่อยู่ปัจจุบันในสวน
   sunlight    Sunlight       @default(FULL)
   water       WaterNeed      @default(HIGH)
   cost        Float // ต้นทุนต่อต้น (จะคำนวณจาก ProductCost)
@@ -94,6 +142,8 @@ model Product {
   status      ProductStatus  @default(AVAILABLE)
   purchaseId  String? // การซื้อที่ได้ต้นไม้นี้มา
   purchase    Purchase?      @relation(fields: [purchaseId], references: [id])
+  ourGardenId String? // สวนของเราที่เก็บต้นไม้นี้
+  ourGarden   OurGarden?     @relation(fields: [ourGardenId], references: [id])
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   sales       Sale[]
@@ -130,18 +180,18 @@ model ProductCost {
 
 // บันทึกการเงิน (บัญชีทุนไม้ล้อม)
 model Transaction {
-  id            String          @id @default(cuid())
-  date          DateTime // วันที่ทำรายการ
-  description   String // รายละเอียด
-  type          TransactionType // ประเภทรายการ
-  amount        Float // จำนวนเงิน
-  balance       Float? // ยอดคงเหลือ
-  referenceId   String? // อ้างอิงไป Purchase หรือ Sale
-  referenceType String? // ประเภทการอ้างอิง
-  gardenId      String? // สวนที่เกี่ยวข้อง (ถ้ามี)
-  garden        Garden?         @relation(fields: [gardenId], references: [id])
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id                String          @id @default(cuid())
+  date              DateTime // วันที่ทำรายการ
+  description       String // รายละเอียด
+  type              TransactionType // ประเภทรายการ
+  amount            Float // จำนวนเงิน
+  balance           Float? // ยอดคงเหลือ
+  referenceId       String? // อ้างอิงไป Purchase หรือ Sale
+  referenceType     String? // ประเภทการอ้างอิง
+  supplierGardenId  String? // สวนที่ซื้อมา (ถ้ามี)
+  supplierGarden    SupplierGarden? @relation(fields: [supplierGardenId], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@map("transactions")
 }
@@ -153,6 +203,7 @@ enum Sunlight {
 
 enum WaterNeed {
   HIGH // ชอบน้ำ
+  MEDIUM // ปานกลาง
   LOW // ไม่ชอบน้ำ
 }
 
@@ -213,4 +264,30 @@ model Customer {
   updatedAt DateTime @updatedAt
 
   @@map("customers")
+}
+
+// ข้อมูลติดต่อ (ผู้จำหน่าย, ลูกค้า, ผู้ซื้อ)
+model Contact {
+  id          String      @id @default(cuid())
+  name        String      // ชื่อบุคคล/บริษัท
+  type        ContactType // ประเภทการติดต่อ
+  phone       String?     // เบอร์โทร
+  email       String?     // อีเมล
+  address     String?     // ที่อยู่
+  province    String?     // จังหวัด
+  district    String?     // อำเภอ
+  subDistrict String?     // ตำบล
+  contactInfo String?     // ข้อมูลติดต่ออื่นๆ
+  note        String?     // หมายเหตุ
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("contacts")
+}
+
+enum ContactType {
+  SUPPLIER  // ผู้จำหน่าย
+  CUSTOMER  // ลูกค้า
+  VENDOR    // ผู้ซื้อ
 }

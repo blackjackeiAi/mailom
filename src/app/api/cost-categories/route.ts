@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
+import { getUserFromToken } from '@/lib/auth'
 
 // GET - Get all cost categories
 export async function GET(request: NextRequest) {
   try {
+    const user = await getUserFromToken(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
@@ -38,6 +42,11 @@ export async function GET(request: NextRequest) {
 // POST - Create a new cost category
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromToken(request)
+    if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     
     const {

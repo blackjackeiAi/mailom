@@ -1,25 +1,25 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 
-type ProductType = {
+type Product = {
   id: string
+  code: string
   name: string
+  description?: string
   price: number
-  images: string[]
-}
-
-type TreeType = {
-  id: string
-  name: string
-  price: number
-}
-
-type TreeProduct = {
-  id: string
-  name: string
-  price: number
-  image: string
+  cost: number
+  status: string
+  height?: number
+  width?: number
+  location?: string
+  ourGarden?: {
+    name: string
+  }
+  images?: {
+    url: string
+    isMain: boolean
+  }[]
 }
 
 export default function SalePage() {
@@ -32,15 +32,29 @@ export default function SalePage() {
     priceTo: ''
   })
 
-  // เพิ่ม state สำหรับควบคุม popup
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [isCartOpen, setIsCartOpen] = useState(false)
 
-  // ข้อมูลตัวอย่าง
-  const trees: TreeType[] = [
-    { id: 'T1234', name: 'ปาล์ม', price: 20000 },
-    { id: 'T1045', name: 'กระถิน', price: 15000 },
-    { id: 'T5214', name: 'พยอม', price: 55000 },
-  ]
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products?status=AVAILABLE', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProducts(data.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -85,25 +99,9 @@ export default function SalePage() {
     }))
   }
 
-  // สร้างข้อมูลตัวอย่างพร้อมรูปภาพ
-  const treeProducts: TreeProduct[] = [
-    { id: '1246', name: 'ปาล์ม', price: 30000, image: '/product/tree4.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree4.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree4.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree4.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree4.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' },
-    { id: '1246', name: 'ปาล์ม', price: 25000, image: '/product/tree5.jpg' }
-  ]
-
   // สถานะสำหรับตะกร้าสินค้า
   const [cart, setCart] = useState<{
-    items: { product: ProductType; quantity: number }[];
+    items: { product: Product; quantity: number }[];
     shipping: number;
     total: number;
   }>({
@@ -142,7 +140,7 @@ export default function SalePage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="">ทั้งหมด</option>
-                {Array.from(new Set(trees.map(tree => tree.name))).map((name, index) => (
+                {Array.from(new Set(products.map(product => product.name))).map((name, index) => (
                   <option key={index} value={name}>{name}</option>
                 ))}
               </select>
@@ -231,12 +229,17 @@ export default function SalePage() {
 
       {/* Products Grid */}
       <div className="grid grid-cols-4 gap-6 mb-6">
-        {treeProducts.map((product, index) => (
+        {loading ? (
+          <div className="col-span-4 text-center py-8">กำลังโหลด...</div>
+        ) : products.length === 0 ? (
+          <div className="col-span-4 text-center py-8 text-gray-500">ไม่พบสินค้า</div>
+        ) : (
+          products.map((product, index) => (
           <div key={index} className="bg-white p-4 rounded-lg shadow">
             {/* รูปหลัก */}
             <div className="aspect-square bg-gray-100 mb-2 relative rounded-lg overflow-hidden">
               <Image
-                src={product.image}
+                src={product.images?.[0]?.url || '/placeholder-tree.jpg'}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -249,7 +252,7 @@ export default function SalePage() {
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span>รหัส</span>
-                <span>{product.id}</span>
+                <span>{product.code}</span>
               </div>
               <div className="flex justify-between">
                 <span>ชื่อ</span>
@@ -266,7 +269,8 @@ export default function SalePage() {
               </button>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       {/* Cart Icon */}

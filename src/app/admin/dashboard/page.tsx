@@ -41,7 +41,9 @@ function DashboardContent() {
 
   const fetchGardens = async () => {
     try {
-      const response = await fetch('/api/gardens')
+      const response = await fetch('/api/our-gardens', {
+        credentials: 'include'
+      })
       const data = await response.json()
       if (response.ok) {
         setGardens(data.data)
@@ -59,7 +61,9 @@ function DashboardContent() {
         ...(gardenId && { gardenId }),
       })
 
-      const response = await fetch(`/api/cost-analysis?${params}`)
+      const response = await fetch(`/api/cost-analysis?${params}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
 
       if (response.ok) {

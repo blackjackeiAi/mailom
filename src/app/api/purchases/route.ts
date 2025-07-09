@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
         { purchaseCode: { contains: search } },
         { supplierRef: { contains: search } },
         { note: { contains: search } },
-        { garden: { name: { contains: search } } },
+        { supplierGarden: { name: { contains: search } } },
       ]
     }
 
     if (gardenId) {
-      where.gardenId = gardenId
+      where.supplierGardenId = gardenId
     }
 
     if (status) {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
         include: {
-          garden: {
+          supplierGarden: {
             select: {
               id: true,
               name: true,
@@ -127,7 +127,8 @@ export async function POST(request: NextRequest) {
     const {
       purchaseCode,
       purchaseDate,
-      gardenId,
+      supplierGardenId,
+      ourGardenId,
       supplierRef,
       totalCost,
       status = 'PENDING',
@@ -136,9 +137,9 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!purchaseCode || !purchaseDate || !gardenId || !totalCost) {
+    if (!purchaseCode || !purchaseDate || !supplierGardenId || !totalCost) {
       return NextResponse.json(
-        { error: 'Purchase code, date, garden, and total cost are required' },
+        { error: 'Purchase code, date, supplier garden, and total cost are required' },
         { status: 400 }
       )
     }
@@ -155,14 +156,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if garden exists
-    const garden = await prisma.garden.findUnique({
-      where: { id: gardenId },
+    // Check if supplier garden exists
+    const supplierGarden = await prisma.supplierGarden.findUnique({
+      where: { id: supplierGardenId },
     })
 
-    if (!garden) {
+    if (!supplierGarden) {
       return NextResponse.json(
-        { error: 'Garden not found' },
+        { error: 'Supplier garden not found' },
         { status: 404 }
       )
     }
@@ -172,7 +173,8 @@ export async function POST(request: NextRequest) {
       data: {
         purchaseCode,
         purchaseDate: new Date(purchaseDate),
-        gardenId,
+        supplierGardenId,
+        ourGardenId,
         supplierRef,
         totalCost,
         status,
@@ -186,7 +188,8 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        garden: true,
+        supplierGarden: true,
+        ourGarden: true,
         productCosts: {
           include: {
             costCategory: true,

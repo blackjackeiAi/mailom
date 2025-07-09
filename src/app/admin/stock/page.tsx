@@ -17,20 +17,17 @@ interface Product {
   status: 'AVAILABLE' | 'SOLD' | 'RESERVED' | 'DEAD'
   location?: string
   createdAt: string
+  ourGarden?: {
+    name: string
+    location?: string
+  }
   purchase?: {
     id: string
     purchaseCode: string
-    garden: {
+    supplierGarden: {
       name: string
       ownerName?: string
     }
-    productCosts: Array<{
-      amount: number
-      description?: string
-      costCategory: {
-        name: string
-      }
-    }>
   }
 }
 
@@ -64,7 +61,9 @@ export default function StockPage() {
         ...(filters.status && { status: filters.status }),
       })
 
-      const response = await fetch(`/api/products?${params}`)
+      const response = await fetch(`/api/products?${params}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
 
       if (response.ok) {
@@ -288,8 +287,8 @@ export default function StockPage() {
                     <td className="px-4 py-3 text-sm">
                       {product.purchase ? (
                         <div>
-                          <div className="text-gray-900">{product.purchase.garden.name}</div>
-                          <div className="text-gray-500 text-xs">{product.purchase.garden.ownerName}</div>
+                          <div className="text-gray-900">{product.purchase.supplierGarden.name}</div>
+                          <div className="text-gray-500 text-xs">{product.purchase.supplierGarden.ownerName}</div>
                         </div>
                       ) : (
                         '-'
@@ -425,9 +424,9 @@ export default function StockPage() {
                     <h4 className="font-medium text-gray-900 mb-3">ข้อมูลการซื้อ</h4>
                     <div className="space-y-2 text-sm">
                       <div><span className="font-medium">รหัสการซื้อ:</span> {selectedProduct.purchase.purchaseCode}</div>
-                      <div><span className="font-medium">สวน:</span> {selectedProduct.purchase.garden.name}</div>
-                      {selectedProduct.purchase.garden.ownerName && (
-                        <div><span className="font-medium">เจ้าของสวน:</span> {selectedProduct.purchase.garden.ownerName}</div>
+                      <div><span className="font-medium">สวน:</span> {selectedProduct.purchase.supplierGarden.name}</div>
+                      {selectedProduct.purchase.supplierGarden.ownerName && (
+                        <div><span className="font-medium">เจ้าของสวน:</span> {selectedProduct.purchase.supplierGarden.ownerName}</div>
                       )}
                     </div>
                   </div>
