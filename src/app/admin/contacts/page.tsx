@@ -22,6 +22,8 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     type: '',
     search: ''
@@ -47,6 +49,7 @@ export default function ContactsPage() {
   const fetchContacts = async () => {
     try {
       setLoading(true)
+      setError(null)
       const params = new URLSearchParams({
         ...(filters.type && { type: filters.type }),
         ...(filters.search && { search: filters.search })
@@ -59,9 +62,13 @@ export default function ContactsPage() {
       if (response.ok) {
         const data = await response.json()
         setContacts(data.data || [])
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'เกิดข้อผิดพลาดในการโหลดข้อมูล')
       }
     } catch (error) {
       console.error('Error fetching contacts:', error)
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์')
     } finally {
       setLoading(false)
     }
@@ -70,6 +77,9 @@ export default function ContactsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      setError(null)
+      setSuccess(null)
+      
       const url = editingContact ? `/api/contacts/${editingContact.id}` : '/api/contacts'
       const method = editingContact ? 'PUT' : 'POST'
 
@@ -81,11 +91,16 @@ export default function ContactsPage() {
       })
 
       if (response.ok) {
+        setSuccess(editingContact ? 'แก้ไขข้อมูลเรียบร้อยแล้ว' : 'เพิ่มข้อมูลเรียบร้อยแล้ว')
         await fetchContacts()
         closeModal()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล')
       }
     } catch (error) {
       console.error('Error saving contact:', error)
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์')
     }
   }
 
@@ -109,6 +124,8 @@ export default function ContactsPage() {
   const closeModal = () => {
     setShowModal(false)
     setEditingContact(null)
+    setError(null)
+    setSuccess(null)
     setFormData({
       name: '',
       type: 'SUPPLIER',
@@ -143,6 +160,35 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Error/Success Messages */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <span className="block sm:inline">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+          <span className="block sm:inline">{success}</span>
+          <button
+            onClick={() => setSuccess(null)}
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">จัดการข้อมูลติดต่อ</h1>
@@ -190,6 +236,8 @@ export default function ContactsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center">กำลังโหลด...</div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500">เกิดข้อผิดพลาด: {error}</div>
         ) : contacts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">ไม่พบข้อมูลติดต่อ</div>
         ) : (

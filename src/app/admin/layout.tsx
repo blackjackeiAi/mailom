@@ -52,6 +52,10 @@ export default function AdminLayout({
             className="flex items-center px-6 py-3 text-white hover:bg-white/10">
             SALE REPORT
           </Link>
+          <Link href="/admin/contacts" 
+            className="flex items-center px-6 py-3 text-white hover:bg-white/10">
+            CONTACTS
+          </Link>
           
           {/* Cost Management Section */}
           <div className="mt-6 px-6 py-2">
